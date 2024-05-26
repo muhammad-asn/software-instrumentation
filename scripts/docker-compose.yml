@@ -1,0 +1,61 @@
+services:
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: grafana
+    restart: always
+    ports:
+      - 3000:3000
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/demo-dashboards
+      - grafana_data:/var/lib/grafana
+  
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: loki
+    restart: always
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki:/etc/loki
+    command: -config.file=/etc/loki/config.yaml
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command: 
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=5m'
+      - '--storage.tsdb.retention.size=10GB'
+
+  fluentbit:
+    image: fluent/fluent-bit:2.1.10
+    container_name: fluent-bit
+    restart: always
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    volumes:
+      - ./fluentbit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - ./../logs:/app/logs
+
+  nginx:
+    image: nginx:1.26.0
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+    logging:
+      driver: fluentd
+      options:
+        tag: nginx
+        fluentd-sub-second-precision: 'true'
+
+volumes:
+  grafana_data:
+  prometheus_data:
